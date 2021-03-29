@@ -1,0 +1,33 @@
+#######################################
+# LCDMenu keyword coloring map
+#######################################
+
+########## datatypes ##########
+LCDMenu	KEYWORD1
+LCDMenuEntry	KEYWORD1
+########## functions ##########
+#LCDMenuEntry	KEYWORD2
+getMenu			KEYWORD2
+isProgMem		KEYWORD2
+isChosen		KEYWORD2
+
+#LCDMenu		KEYWORD2
+get			KEYWORD2
+#getChar			KEYWORD2
+#getNumber		KEYWORD2
+lcdBegin		KEYWORD2
+load			KEYWORD2
+show			KEYWORD2
+run			KEYWORD2
+
+########## constants ##########
+#menu LITERAL1
+#menu KEYWORD2
+LCD_MAX_ROWS	LITERAL1
+
+########## misc - macro defines ##########
+SERIALMENU_DISABLE_PROGMEM_SUPPORT	LITERAL2
+SERIALMENU_DISABLE_HEARTBEAT_ON_IDLE	LITERAL2
+SERIALMENU_MINIMAL_FOOTPRINT		LITERAL2
+GET_MENU_SIZE				LITERAL2
+
