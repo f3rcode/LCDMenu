@@ -11,19 +11,14 @@ const char mainMenuTempeh[]  = "1 - Tempeh";
 const char mainMenuNatto[]  = "2 - Natto";
 const char mainMenuKoji[]  = "3 - Koji";
 
-
-// Forward declarations for the config-menu referenced before it is defined.
-extern const LCDMenuEntry configMenu[];
-extern const uint8_t configMenuSize;
-
 // Define the main menu
 const LCDMenuEntry mainMenu[] = {
-  {mainMenuTempeh, false, '1', [](){Serial.println("Go!");
+  {mainMenuTempeh, false, '1', [](){Serial.println("Option1");
 
                                     foo();
                                   } },
   {mainMenuNatto, false, '2', [](){
-                                  Serial.println("Go!");
+                                  Serial.println("Option2");
 
                                   foo();
                                   } },
@@ -39,8 +34,14 @@ void foo(){
   }
 
 void setup() {
+  Serial.begin(9600);
+  while (!Serial){}; //<---Serial init on LCDMenu constructor
 
-  while (!Serial){};
+  //LED on 5th. Debugging purpose
+  pinMode(5, INPUT);
+  digitalWrite(5, HIGH); //PULLUP
+
+  menu.lcdBegin();
   menu.load(mainMenu, mainMenuSize);
   // Display current menu (mainMenu)
   menu.show();
@@ -49,5 +50,5 @@ void setup() {
 void loop() {
 
    menu.run(500);
-   delay(1500);
+   delay(500);
 }

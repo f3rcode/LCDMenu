@@ -1,5 +1,5 @@
 ///////////////////////////////////////////////////////////////////////////////
-// LCDMenu - by f3rcode (based on LCDMenu (Dan Truong's library)
+// LCDMenu - by f3rcode (based on SerialMenu (Dan Truong's library)
 ///////////////////////////////////////////////////////////////////////////////
 
 #include <LCDMenu.hpp>
@@ -10,15 +10,26 @@ uint8_t LCDMenu::size = uint8_t(0);
 uint8_t LCDMenu::cursor = uint8_t(0);
 uint8_t LCDMenu::windowMin = uint8_t(0);
 uint8_t LCDMenu::windowMax = LCD_MAX_ROWS-1;
-
+uint8_t LCDMenu::portStatus =  uint8_t(0);
 
 LCDMenu::LCDMenu() :
-    lcd(0x27),oldCursor(0)
+    lcd(0x27)
     {
 
     Serial.begin(9600);
     while (!Serial);
+
+    pcIntInit();
+    pinMode(ENTER_BUTTON, INPUT);
+    digitalWrite(ENTER_BUTTON, HIGH); //PULLUP
 }
+
+void LCDMenu::pcIntInit()
+   {
+   PCMSK0 |= (1 << PCINTx(0));//|(1 << PCINTx(1))|(1 << PCINTx(2));  //enables pin <--PREFERIBLY NOT HARDCODED
+   PCIFR |= (1 << PCIF0); //clear any oustanding interrupt
+   PCICR |= (1 << PCIE0); //enables interrupt for the group PCINT0..7 corresponding to portB (D8 to D13)
+   }
 
 static LCDMenu &LCDMenu::get()
   {
@@ -149,9 +160,48 @@ bool LCDMenu::run(const uint16_t loopDelayMs)
 
         }
 
-      Serial.print(menuChoice);
-      Serial.println(": Invalid menu choice.");
-      return false;
+        //SerialMenu's block
+        uint8_t i;
+        for (i = 0; i < size; ++i)
+        {
+          if (menu[i].isChosen(menuChoice))
+          {
+            menu[i].actionCallback();
+            break;
+          }
+        }
+        if (i == size)
+        {
+          Serial.print(menuChoice);
+          Serial.println(": Invalid menu choice.");
+        }
+        return true;
+
 
     }
   }
+
+static void LCDMenu::enterSelected()
+{
+
+  digitalWrite(5,LOW);//DEBUG
+
+  menu[LCDMenu::cursor].actionCallback();
+
+  return;
+ }
+
+//ISR_NOBLOCK insert an SEI() instruction right at the beginning
+// in order to not defer any other interrupt more than absolutely needed.
+// This way, nested interrupts are enabled giving buttons interrupts low priority
+ISR(PCINT0_vect, ISR_NOBLOCK)
+ {
+    uint8_t newPortStatus=PINB;
+    uint8_t triggerPins=PCMSK0 & (LCDMenu::portStatus ^ newPortStatus) & ~newPortStatus; //^ = xor detects a change and the final & detects rising edge
+
+
+    LCDMenu::portStatus=newPortStatus;
+
+     if (triggerPins & _BV(digitalPinToPCMSKbit(ENTER_BUTTON))) {LCDMenu::enterSelected();}
+
+ }

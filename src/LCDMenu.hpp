@@ -32,6 +32,11 @@
 // Lcd display has 2 rows
 //////////////////////////////////
 #define LCD_MAX_ROWS 2
+//buttons
+#define ENTER_BUTTON 8 //PB0 = D8
+//int
+#define PCINTx(a) PCINT ## a //a MUST be in a range [0,7] corresponding to PB0..7 i.e. D8..13
+
 ///////////////////////////////////////////////////////////////////////////////
 // Macro to get the number of menu entries in a menu array.
 ///////////////////////////////////////////////////////////////////////////////
@@ -111,16 +116,17 @@ class LCDMenu
 
     LCD_I2C lcd;
     static uint8_t cursor;
-    uint8_t oldCursor;
     static uint8_t windowMin;
     static uint8_t windowMax;
-
 
     //Constructor: init with an empty menu, prepares LCD screen
     LCDMenu();
 
+    void pcIntInit();
 
   public:
+
+    static uint8_t portStatus;
 
     // Get a pointer to the one singleton instance of this class
     static LCDMenu& get();
@@ -136,7 +142,7 @@ class LCDMenu
     {
       menu = array;
       size = arraySize;
-      lcd.backlight();
+    //  lcd.backlight();
     }
 
     // Display the current menu on the Serial console
@@ -147,6 +153,8 @@ class LCDMenu
     // SerialMenu::run modified so Menu can be navigated by typing
     //W (up) and S (down)
     bool run(const uint16_t loopDelayMs);
+
+    static void enterSelected();
 
 
 };
