@@ -22,11 +22,15 @@ LCDMenu::LCDMenu() :
     pcIntInit();
     pinMode(ENTER_BUTTON, INPUT);
     digitalWrite(ENTER_BUTTON, HIGH); //PULLUP
+    pinMode(UP_BUTTON, INPUT);
+    digitalWrite(UP_BUTTON, HIGH); //PULLUP
+    pinMode(DOWN_BUTTON, INPUT);
+    digitalWrite(DOWN_BUTTON, HIGH); //PULLUP
 }
 
 void LCDMenu::pcIntInit()
    {
-   PCMSK0 |= (1 << PCINTx(0));//|(1 << PCINTx(1))|(1 << PCINTx(2));  //enables pin <--PREFERIBLY NOT HARDCODED
+   PCMSK0 |= (1 << PCINTx(0))|(1 << PCINTx(1))|(1 << PCINTx(2));  //enables pin <--PREFERIBLY NOT HARDCODED
    PCIFR |= (1 << PCIF0); //clear any oustanding interrupt
    PCICR |= (1 << PCIE0); //enables interrupt for the group PCINT0..7 corresponding to portB (D8 to D13)
    }
@@ -191,6 +195,41 @@ static void LCDMenu::enterSelected()
   return;
  }
 
+static void LCDMenu::upSelected()
+{
+
+ digitalWrite(5,HIGH);//DEBUG
+
+ if (cursor == windowMax){
+   if (windowMax== size-1)
+     return false;
+   else{
+     windowMin++;
+     cursor=++windowMax;
+   }
+ }else
+   cursor++;
+
+ return;
+}
+
+ static void LCDMenu::downSelected()
+{
+
+ digitalWrite(5,HIGH);//DEBUG
+
+ if (cursor == windowMin){
+   if (!windowMin) //(=0)
+     return false;
+   else{
+     cursor=--windowMin;
+     windowMax--;
+   }
+ }else
+   cursor--;
+
+ return;
+}
 //ISR_NOBLOCK insert an SEI() instruction right at the beginning
 // in order to not defer any other interrupt more than absolutely needed.
 // This way, nested interrupts are enabled giving buttons interrupts low priority
@@ -202,6 +241,11 @@ ISR(PCINT0_vect, ISR_NOBLOCK)
 
     LCDMenu::portStatus=newPortStatus;
 
-     if (triggerPins & _BV(digitalPinToPCMSKbit(ENTER_BUTTON))) {LCDMenu::enterSelected();}
+
+   if (triggerPins & _BV(digitalPinToPCMSKbit(UP_BUTTON)))  {LCDMenu::upSelected();}
+
+   else if (triggerPins & _BV(digitalPinToPCMSKbit(DOWN_BUTTON)))  {LCDMenu::downSelected();}
+
+   else if (triggerPins & _BV(digitalPinToPCMSKbit(ENTER_BUTTON))) {LCDMenu::enterSelected();}
 
  }

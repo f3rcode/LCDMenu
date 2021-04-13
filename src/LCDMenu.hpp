@@ -34,6 +34,8 @@
 #define LCD_MAX_ROWS 2
 //buttons
 #define ENTER_BUTTON 8 //PB0 = D8
+#define UP_BUTTON 9 //PB1 = D9
+#define DOWN_BUTTON 10 //PB2 = D10
 //int
 #define PCINTx(a) PCINT ## a //a MUST be in a range [0,7] corresponding to PB0..7 i.e. D8..13
 
@@ -155,6 +157,8 @@ class LCDMenu
     bool run(const uint16_t loopDelayMs);
 
     static void enterSelected();
+    static void upSelected();
+    static void downSelected();
 
 
 };
