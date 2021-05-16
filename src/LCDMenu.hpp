@@ -151,6 +151,12 @@ class LCDMenu
     // Display the current menu on the Serial console
     void show() const;
 
+    // Uses I2C_LC2 print, so there is no need of instanciating
+    // a new object if we just want to show a result on screen, for instance.
+    void print(const char* text); //<- doesn't show menu after printing
+    // prints text and shows menu after delayMs
+    void print(const char* text, const uint8_t delayMs);
+
 ///////////////////////////////////////////////////////////////////////////////
     // Run the menu.
     // SerialMenu::run modified so Menu can be navigated by typing

@@ -13,18 +13,23 @@ const char mainMenuKoji[]  = "3 - Koji";
 
 // Define the main menu
 const LCDMenuEntry mainMenu[] = {
-  {mainMenuTempeh, false, '1', [](){Serial.println("Option1");
-
+  {mainMenuTempeh, false, '1', [](){//prints on lcd and Serial
+                                    //and shows menu on lcd again after
+                                    Serial.println("Option1");
+                                    menu.print("Option2");
                                     foo();
                                   } },
-  {mainMenuNatto, false, '2', [](){
+  {mainMenuNatto, false, '2', [](){//prints on lcd and serial
+                                  //and get the message on lcd screen
+                                  //UNTIL PRESSING A BUTTON WHICH
+                                  //CHANGES INTERNAL CURSOR VALUE
                                   Serial.println("Option2");
-
+                                  menu.print("Option2");
                                   foo();
                                   } },
   {mainMenuKoji, false, '3', [](){Serial.println("Still not available.");
-                                  delay(500);
-                                  menu.show();} },
+                                  menu.print("Still not available.");
+                                  } },
 
 };
 constexpr uint8_t mainMenuSize = GET_MENU_SIZE(mainMenu);

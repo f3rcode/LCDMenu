@@ -72,6 +72,17 @@ void LCDMenu::show() const
     }
 
 }
+void LCDMenu::print(const char* text){
+  lcd.clear();
+  lcd.print(text);
+}
+
+void LCDMenu::print(const char* text, const uint8_t delayMs){
+  lcd.clear();
+  lcd.print(text);
+  delay(delayMs);
+  show();
+}
 
 /*
 * SerialMenu::run function mod
