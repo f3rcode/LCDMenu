@@ -13,7 +13,8 @@ uint8_t LCDMenu::windowMax = LCD_MAX_ROWS-1;
 uint8_t LCDMenu::portStatus =  uint8_t(0);
 
 LCDMenu::LCDMenu() :
-    lcd(0x27)
+    lcd(0x27),
+    oldCursor(0)
     {
 
     Serial.begin(9600);
@@ -76,114 +77,15 @@ void LCDMenu::show() const
 * SerialMenu::run function mod
 */
 bool LCDMenu::run(const uint16_t loopDelayMs)
-  {
-
-      const bool userInputAvailable = Serial.available();
-
-      // Code block to display a heartbeat as a dot on the Serial console and
-      // also by blinking the status LED on the board.
-      #if LCDMenu_SHOW_HEARTBEAT_ON_IDLE == true
-      {
-        const uint16_t callsPerSecond = 1000 / loopDelayMs;
-        const uint16_t loopsPerTick = 1000 * callsPerSecond; //f3rcode (test)
-        const uint16_t loopsPerBlink = callsPerSecond; // blink every second
-
-        // Waiting for input
-        if (!userInputAvailable)
-        {
-          ++waiting;
-          // After waiting for 10s, heartbeat blink the LED every second.
-          if (waiting >= loopsPerTick && waiting % loopsPerBlink == 0)
-          {
-            digitalWrite(LED_BUILTIN, ((waiting / loopsPerBlink) & 0x01) ? HIGH : LOW);
-         }
-          // Print heartbeat every 10s on console.
-          if (waiting % loopsPerTick == 0)
-          {
-            Serial.print(".");
-          }
-        }
-        else
-        {
-          // New input: Clear to a new line if we printed ticks.
-          if (waiting >= loopsPerTick)
-          {
-            Serial.println("");
-            waiting = 0;
-
-          }
-        }
-      }
-      #endif
-
-      // Process the input
-      if (!userInputAvailable)
-      {
-        return false;
-      }
-      else
-      {
-        // Read one character from the Serial console as a menu choice.
-        char menuChoice = Serial.read();
-
-        // Carriage return is not a menu choice
-        if (menuChoice == 0x0A)
-        {
-          return false;
-        }
-        if (menuChoice == 0x53) //S = DOWN
-        {
-          if (cursor == windowMin){
-            if (!windowMin) //(=0)
-              return false;
-            else{
-              cursor=--windowMin;
-              windowMax--;
-            }
-          }else
-            cursor--;
-
-          show();
-          return true;
-
-        }
-        if (menuChoice == 0x57) //W = UP
-        {
-           if (cursor == windowMax){
-            if (windowMax== size-1)
-              return false;
-            else{
-              windowMin++;
-              cursor=++windowMax;
-            }
-          }else
-            cursor++;
-
-          show();
-          return true;
-
-        }
-
-        //SerialMenu's block
-        uint8_t i;
-        for (i = 0; i < size; ++i)
-        {
-          if (menu[i].isChosen(menuChoice))
-          {
-            menu[i].actionCallback();
-            break;
-          }
-        }
-        if (i == size)
-        {
-          Serial.print(menuChoice);
-          Serial.println(": Invalid menu choice.");
-        }
-        return true;
-
-
-    }
+{
+  if (oldCursor!=cursor){
+    oldCursor=cursor;
+    show();
+    return true;
   }
+
+  return false;
+}
 
 static void LCDMenu::enterSelected()
 {
@@ -230,7 +132,7 @@ static void LCDMenu::upSelected()
 
  return;
 }
-//ISR_NOBLOCK insert an SEI() instruction right at the beginning
+//ISR_NOBLOCK insert a SEI() instruction right at the beginning
 // in order to not defer any other interrupt more than absolutely needed.
 // This way, nested interrupts are enabled giving buttons interrupts low priority
 ISR(PCINT0_vect, ISR_NOBLOCK)

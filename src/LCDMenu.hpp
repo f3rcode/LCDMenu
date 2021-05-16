@@ -118,6 +118,7 @@ class LCDMenu
 
     LCD_I2C lcd;
     static uint8_t cursor;
+    uint8_t oldCursor;
     static uint8_t windowMin;
     static uint8_t windowMax;
 
