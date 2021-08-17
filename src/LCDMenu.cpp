@@ -5,12 +5,20 @@
 #include <LCDMenu.hpp>
 
 LCDMenu* LCDMenu::singleton = nullptr;
-const LCDMenuEntry* LCDMenu::menu = nullptr;
+LCDMenuEntry* LCDMenu::menu = nullptr;
 uint8_t LCDMenu::size = uint8_t(0);
 uint8_t LCDMenu::cursor = uint8_t(0);
 uint8_t LCDMenu::windowMin = uint8_t(0);
 uint8_t LCDMenu::windowMax = LCD_MAX_ROWS-1;
 uint8_t LCDMenu::portStatus =  uint8_t(0);
+uint8_t LCDMenu::number;
+boolean LCDMenu::inNumberMenu=false;
+
+char LCDMenu::getNumberMenuIntro[15];
+char LCDMenu::getNumberMenuValue[15];
+
+
+
 
 LCDMenu::LCDMenu() :
     lcd(0x27),
@@ -36,7 +44,8 @@ void LCDMenu::pcIntInit()
    PCICR |= (1 << PCIE0); //enables interrupt for the group PCINT0..7 corresponding to portB (D8 to D13)
    }
 
-static LCDMenu &LCDMenu::get()
+//static
+LCDMenu &LCDMenu::get()
   {
       if (!singleton)
         singleton = new LCDMenu;
@@ -44,7 +53,8 @@ static LCDMenu &LCDMenu::get()
       return *singleton;
     }
 
-static const LCDMenu& LCDMenu::get(const LCDMenuEntry* array, uint8_t arraySize)
+//static
+const LCDMenu& LCDMenu::get(LCDMenuEntry* array, uint8_t arraySize)
   {
       (void) LCDMenu::get();
       singleton->load(array, arraySize);
@@ -59,88 +69,185 @@ void LCDMenu::lcdBegin()
     lcd.backlight();
 }
 
-void LCDMenu::show() const
+void LCDMenu::show()
 {
     //by now, just printing data from SRAM
-    for (uint8_t i = windowMin; i <= windowMax; i++)
+    lcd.clear();
+    if (!inNumberMenu)
     {
-       lcd.setCursor(0, i-windowMin);
-       Serial.println(menu[i].getMenu());
-       if (i==cursor) lcd.print(">");
-       else lcd.print(" ");
-       lcd.print(menu[i].getMenu());
+      for (uint8_t i = windowMin; i <= windowMax; i++)
+      {
+         lcd.setCursor(0, i-windowMin);
+         Serial.println(menu[i].getMenu());
+         if (i==cursor) lcd.print(">");
+         else lcd.print(" ");
+         lcd.print(menu[i].getMenu());
+      }
+    }
+    else
+    {
+      lcd.setCursor(0, 0);
+      lcd.print(menu[0].getMenu());
+      lcd.setCursor(0, 1);
+      reckonNumberMenu();
+      lcd.print(menu[1].getMenu());
     }
 
 }
-void LCDMenu::print(const char* text){
+
+void LCDMenu::reckonNumberMenu()
+{
+  sprintf(getNumberMenuValue,"%d    [%d]    %d",number-1,number,number+1);
+}
+
+void LCDMenu::print (const char* text)
+{
   lcd.clear();
   lcd.print(text);
 }
 
-void LCDMenu::print(const char* text, const uint8_t delayMs){
+void LCDMenu::print (int integer)
+{
+  lcd.clear();
+  lcd.print(integer);
+}
+
+void LCDMenu::print(const char* text, const uint8_t delayMs)
+{
   lcd.clear();
   lcd.print(text);
   delay(delayMs);
   show();
 }
 
+void LCDMenu::print(int integer, const uint8_t delayMs)
+{
+  lcd.clear();
+  lcd.print(integer);
+  delay(delayMs);
+  show();
+}
+////GET RID OF MAGIC NUMBERS IN DEFAULT ARGS!!!
+/*
+template <class T>
+T LCDMenu::getNumber(const char* message, const T startingValue){
+
+  T number=(T)0;
+
+  this->load(getNumberMenu,numberMenuSize);
+  this->show();
+
+  return number;
+  //
+  //while()
+  //  run(loopDelayMs);
+
+}
+*/
 /*
 * SerialMenu::run function mod
 */
 bool LCDMenu::run(const uint16_t loopDelayMs)
 {
-  if (oldCursor!=cursor){
-    oldCursor=cursor;
-    show();
-    return true;
-  }
+  if (!inNumberMenu)
+  {
+    if (oldCursor!=cursor){
+      oldCursor=cursor;
+      show();
+      return true;
+    }
 
-  return false;
+    delay(loopDelayMs);
+
+    return false;
+ }
+ else
+ {
+   if (cursor<oldCursor)
+   {
+      number--;
+   }
+   else if (cursor>oldCursor)
+   {
+     number++;
+   }
+   else
+   {
+     delay(loopDelayMs);
+     return false;
+   }
+   cursor=oldCursor;
+   delay(loopDelayMs);
+   show();
+   return true;
+ }
 }
 
-static void LCDMenu::enterSelected()
+//static
+void LCDMenu::enterSelected()
 {
 
   digitalWrite(5,LOW);//DEBUG
 
-  menu[LCDMenu::cursor].actionCallback();
+  if (!inNumberMenu)
+  {
+    menu[LCDMenu::cursor].actionCallback();
+  }
+  else
+  {
+    menu[1].actionCallback();
+  }
 
   return;
  }
 
-static void LCDMenu::upSelected()
+//static
+void LCDMenu::upSelected()
 {
 
- digitalWrite(5,HIGH);//DEBUG
+   digitalWrite(5,HIGH);//DEBUG
 
- if (cursor == windowMax){
-   if (windowMax== size-1)
-     return false;
-   else{
-     windowMin++;
-     cursor=++windowMax;
-   }
- }else
-   cursor++;
-
- return;
+   if (!inNumberMenu)
+     {
+     if (cursor == windowMax){
+       if (windowMax== size-1)
+         return;
+       else{
+         windowMin++;
+         cursor=++windowMax;
+       }
+     }else
+       cursor++;
+  }
+  else
+  {
+    cursor++;
+  }
+  return;
 }
 
- static void LCDMenu::downSelected()
+ //static
+ void LCDMenu::downSelected()
 {
 
  digitalWrite(5,HIGH);//DEBUG
 
- if (cursor == windowMin){
-   if (!windowMin) //(=0)
-     return false;
-   else{
-     cursor=--windowMin;
-     windowMax--;
-   }
- }else
+ if (!inNumberMenu)
+   {
+   if (cursor == windowMin){
+     if (!windowMin) //(=0)
+       return;
+     else{
+       cursor=--windowMin;
+       windowMax--;
+     }
+   }else
+     cursor--;
+ }
+ else
+ {
    cursor--;
-
+ }
  return;
 }
 //ISR_NOBLOCK insert a SEI() instruction right at the beginning
