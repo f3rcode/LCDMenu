@@ -11,7 +11,7 @@ uint8_t LCDMenu::cursor = uint8_t(0);
 uint8_t LCDMenu::windowMin = uint8_t(0);
 uint8_t LCDMenu::windowMax = LCD_MAX_ROWS-1;
 uint8_t LCDMenu::portStatus =  uint8_t(0);
-uint8_t LCDMenu::number;
+uint16_t LCDMenu::number;
 boolean LCDMenu::inNumberMenu=false;
 
 char LCDMenu::getNumberMenuIntro[15];
@@ -97,7 +97,7 @@ void LCDMenu::show()
 
 void LCDMenu::reckonNumberMenu()
 {
-  sprintf(getNumberMenuValue,"%d    [%d]    %d",number-1,number,number+1);
+  sprintf(getNumberMenuValue,"%d   [%d]   %d",number-1,number,number+1);
 }
 
 void LCDMenu::print (const char* text)
@@ -106,10 +106,37 @@ void LCDMenu::print (const char* text)
   lcd.print(text);
 }
 
+
 void LCDMenu::print (int integer)
 {
   lcd.clear();
   lcd.print(integer);
+}
+
+void LCDMenu::print (float number)
+{
+  lcd.clear();
+  lcd.print(number);
+}
+
+void LCDMenu::print (float number1,float number2)
+{
+  lcd.clear();
+  lcd.setCursor(0, 0);
+  lcd.print(number1);
+  lcd.setCursor(0, 1);
+  lcd.print(number2);
+}
+
+void LCDMenu::print (float number1,float number2,float number3)
+{
+  lcd.clear();
+  lcd.setCursor(0, 0);
+  lcd.print(number1);
+  lcd.setCursor(0, 1);
+  lcd.print(number2);
+  lcd.setCursor(12, 1);
+  lcd.print(number3);
 }
 
 void LCDMenu::print(const char* text, const uint8_t delayMs)
@@ -151,7 +178,13 @@ bool LCDMenu::run(const uint16_t loopDelayMs)
 {
   if (!inNumberMenu)
   {
+  //  Serial.println("runrun");    Serial.println(oldCursor);
+  //  Serial.println(cursor);
+
+
     if (oldCursor!=cursor){
+      //Serial.println("runrunjjjjjj");
+
       oldCursor=cursor;
       show();
       return true;
@@ -176,6 +209,8 @@ bool LCDMenu::run(const uint16_t loopDelayMs)
      delay(loopDelayMs);
      return false;
    }
+   Serial.println(number);
+
    cursor=oldCursor;
    delay(loopDelayMs);
    show();
@@ -260,7 +295,7 @@ ISR(PCINT0_vect, ISR_NOBLOCK)
 
 
     LCDMenu::portStatus=newPortStatus;
-
+    
 
    if (triggerPins & _BV(digitalPinToPCMSKbit(UP_BUTTON)))  {LCDMenu::upSelected();}
 

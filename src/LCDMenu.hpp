@@ -31,8 +31,6 @@
 // Lcd display has 2 rows
 //////////////////////////////////
 #define LCD_MAX_ROWS 2
-//"impossible" value for LCD::number variable
-#define WEIRD_NUMBER -99
 //buttons
 #define ENTER_BUTTON 8 //PB0 = D8
 #define UP_BUTTON 9 //PB1 = D9
@@ -153,7 +151,7 @@ class LCDMenu
     static uint8_t portStatus;
 
     //getNumber value
-    static uint8_t number;
+    static uint16_t number;
 
     // Get a pointer to the one singleton instance of this class
     static LCDMenu& get();
@@ -196,6 +194,9 @@ class LCDMenu
     // a new object if we just want to show a result on screen, for instance.
     void print (const char* text); //<- doesn't show menu after printing
     void print (int integer); //<- doesn't show menu after printing
+    void print (float number);
+    void print (float number1,float number2);
+    void print (float number1,float number2,float number3);
 
     // prints text and shows menu after delayMs
     void print(const char* text, const uint8_t delayMs);
@@ -226,6 +227,8 @@ class LCDMenu
       uint8_t numberMenuSize = GET_MENU_SIZE(getNumberMenu);
 
       number=startingValue;
+      //Serial.println(number);
+
       sprintf(getNumberMenuIntro, "%s", message);
       reckonNumberMenu();
       sprintf(getNumberMenuValue, "%d", startingValue);
@@ -241,7 +244,7 @@ class LCDMenu
         run(500);
       }
 
-      return (T)number; 
+      return (T)number;
     }
 ///////////////////////////////////////////////////////////////////////////////
     // Run the menu.
