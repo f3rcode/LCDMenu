@@ -7,7 +7,7 @@
 LCDMenu* LCDMenu::singleton = nullptr;
 LCDMenuEntry* LCDMenu::menu = nullptr;
 uint8_t LCDMenu::size = uint8_t(0);
-uint8_t LCDMenu::cursor = uint8_t(0);
+int8_t LCDMenu::cursor = int8_t(0);
 uint8_t LCDMenu::windowMin = uint8_t(0);
 uint8_t LCDMenu::windowMax = LCD_MAX_ROWS-1;
 uint8_t LCDMenu::portStatus =  uint8_t(0);
@@ -30,7 +30,7 @@ LCDMenu::LCDMenu() :
 
     pcIntInit();
     pinMode(ENTER_BUTTON, INPUT);
-    digitalWrite(ENTER_BUTTON, HIGH); //PULLUP
+    digitalWrite(ENTER_BUTTON, HIGH); //PULLUP //NOW EXTERNAL PULLUP!!!!!
     pinMode(UP_BUTTON, INPUT);
     digitalWrite(UP_BUTTON, HIGH); //PULLUP
     pinMode(DOWN_BUTTON, INPUT);
@@ -86,7 +86,9 @@ void LCDMenu::show()
     }
     else
     {
+      //void print (const char* text1, const char* text2)
       lcd.setCursor(0, 0);
+      Serial.println(menu[0].getMenu());
       lcd.print(menu[0].getMenu());
       lcd.setCursor(0, 1);
       reckonNumberMenu();
@@ -100,22 +102,46 @@ void LCDMenu::reckonNumberMenu()
   sprintf(getNumberMenuValue,"%d   [%d]   %d",number-1,number,number+1);
 }
 
-void LCDMenu::print (const char* text)
+void LCDMenu::print(const char* text, const uint8_t delayMs)
 {
   lcd.clear();
+  lcd.setCursor(0, 0);
   lcd.print(text);
+  if (delayMs != 0 )
+  {
+    delay(delayMs);
+    show();
+  }
 }
 
-
-void LCDMenu::print (int integer)
+void LCDMenu::print (const char* text1, const char* text2)
 {
   lcd.clear();
+  lcd.setCursor(0, 0);
+  Serial.print(text1);
+  Serial.print(":");
+  Serial.println(text2);
+  lcd.print(text1);
+  lcd.setCursor(0, 1);
+  lcd.print(text2);
+}
+
+void LCDMenu::print(int integer, const uint8_t delayMs)
+{
+  lcd.clear();
+  lcd.setCursor(0, 0);
   lcd.print(integer);
+  if (delayMs != 0 )
+  {
+    delay(delayMs);
+    show();
+  }
 }
 
 void LCDMenu::print (float number)
 {
   lcd.clear();
+  lcd.setCursor(0, 0);
   lcd.print(number);
 }
 
@@ -139,21 +165,19 @@ void LCDMenu::print (float number1,float number2,float number3)
   lcd.print(number3);
 }
 
-void LCDMenu::print(const char* text, const uint8_t delayMs)
+void LCDMenu::print (float number1,float number2,float number3,const char* text)
 {
   lcd.clear();
+  lcd.setCursor(0, 0);
+  lcd.print(number1);
+  lcd.setCursor(11, 0);
   lcd.print(text);
-  delay(delayMs);
-  show();
+  lcd.setCursor(0, 1);
+  lcd.print(number2);
+  lcd.setCursor(12, 1);
+  lcd.print(number3);
 }
 
-void LCDMenu::print(int integer, const uint8_t delayMs)
-{
-  lcd.clear();
-  lcd.print(integer);
-  delay(delayMs);
-  show();
-}
 ////GET RID OF MAGIC NUMBERS IN DEFAULT ARGS!!!
 /*
 template <class T>
@@ -178,13 +202,8 @@ bool LCDMenu::run(const uint16_t loopDelayMs)
 {
   if (!inNumberMenu)
   {
-  //  Serial.println("runrun");    Serial.println(oldCursor);
-  //  Serial.println(cursor);
-
-
-    if (oldCursor!=cursor){
-      //Serial.println("runrunjjjjjj");
-
+    if (oldCursor!=cursor)
+    {
       oldCursor=cursor;
       show();
       return true;
@@ -209,8 +228,6 @@ bool LCDMenu::run(const uint16_t loopDelayMs)
      delay(loopDelayMs);
      return false;
    }
-   Serial.println(number);
-
    cursor=oldCursor;
    delay(loopDelayMs);
    show();
@@ -243,16 +260,24 @@ void LCDMenu::upSelected()
    digitalWrite(5,HIGH);//DEBUG
 
    if (!inNumberMenu)
+   {
+     if (cursor == windowMax)
      {
-     if (cursor == windowMax){
-       if (windowMax== size-1)
+       if (windowMax == size-1)
+       {
          return;
-       else{
-         windowMin++;
-         cursor=++windowMax;
        }
-     }else
+       else
+       {
+         cursor = windowMax;
+         windowMax++;
+         windowMin++;
+       }
+     }
+     else
+     {
        cursor++;
+     }
   }
   else
   {
@@ -268,16 +293,24 @@ void LCDMenu::upSelected()
  digitalWrite(5,HIGH);//DEBUG
 
  if (!inNumberMenu)
+ {
+   if (cursor == windowMin)
    {
-   if (cursor == windowMin){
      if (!windowMin) //(=0)
+     {
        return;
-     else{
-       cursor=--windowMin;
+     }
+     else
+     {
+       cursor = windowMin;
+       windowMin--;
        windowMax--;
      }
-   }else
+   }
+   else
+   {
      cursor--;
+   }
  }
  else
  {
@@ -295,7 +328,7 @@ ISR(PCINT0_vect, ISR_NOBLOCK)
 
 
     LCDMenu::portStatus=newPortStatus;
-    
+
 
    if (triggerPins & _BV(digitalPinToPCMSKbit(UP_BUTTON)))  {LCDMenu::upSelected();}
 

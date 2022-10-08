@@ -136,8 +136,8 @@ class LCDMenu
     static boolean inNumberMenu;
 
     LCD_I2C lcd;
-    static uint8_t cursor;
-    uint8_t oldCursor;
+    static int8_t cursor;
+    int8_t oldCursor;
     static uint8_t windowMin;
     static uint8_t windowMax;
 
@@ -166,22 +166,16 @@ class LCDMenu
     inline void load(LCDMenuEntry* array, uint8_t arraySize)
     {
       //reset screen values
-      if (inNumberMenu)
-      {
-        cursor=1;
-        oldCursor=1;
-      }
-      else
-      {
-        cursor=0;
-        oldCursor=0;
-      }
+      cursor=0;
+      oldCursor=0;
 
       windowMin=0;
       windowMax=LCD_MAX_ROWS-1;
 
       menu = array;
       size = arraySize;
+      Serial.print("LoadingMenu ");
+      Serial.println(menu[0].getMenu());
     //  lcd.backlight();
     }
 
@@ -192,15 +186,14 @@ class LCDMenu
 
     // Uses I2C_LC2 print, so there is no need of instanciating
     // a new object if we just want to show a result on screen, for instance.
-    void print (const char* text); //<- doesn't show menu after printing
-    void print (int integer); //<- doesn't show menu after printing
+    void print(const char* text, const uint8_t delayMs = 0); // prints text and shows menu after delayMs if set
+    void print (const char* text1, const char* text2);
+    void print(int integer, const uint8_t delayMs = 0);  // prints text and shows menu after delayMs if set
     void print (float number);
     void print (float number1,float number2);
     void print (float number1,float number2,float number3);
+    void print (float number1,float number2,float number3, const char* text);
 
-    // prints text and shows menu after delayMs
-    void print(const char* text, const uint8_t delayMs);
-    void print(int integer, const uint8_t delayMs);
 
     // return a number input read form the LCD "console".
     // Note: this routine is showing a special menu
@@ -216,11 +209,7 @@ class LCDMenu
         {getNumberMenuValue, false, '2', [](){
           //DEBUGGING PURPOSES
           Serial.println("Lambda world");
-          //singleton->print("Lambda world",(uint8_t) 1000);
-          singleton->inNumberMenu=!singleton->inNumberMenu;
-          singleton->load(singleton->formerMenu, singleton->formerMenuSize);
-          // Display former menu
-          singleton->show();
+          singleton->inNumberMenu = !singleton->inNumberMenu;
         }}
       };
 
@@ -244,6 +233,11 @@ class LCDMenu
         run(500);
       }
 
+      //Display former menu
+      load(singleton->formerMenu, singleton->formerMenuSize);
+      show();
+      Serial.print("--->");
+      Serial.println((T)number);
       return (T)number;
     }
 ///////////////////////////////////////////////////////////////////////////////
