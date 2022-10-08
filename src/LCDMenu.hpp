@@ -50,62 +50,12 @@
 // - a menu key to select
 // - a callback function to perform the menu action
 ///////////////////////////////////////////////////////////////////////////////
-class LCDMenuEntry {
-  public:
-    // Callback function that performs this menu's action
-    void (*actionCallback)();
 
-  private:
-    // Message to display via getMenu()
-    // The pointer can be in SRAM or in FLASH (requires PROGMEM to access)
-    char * message;
-    // Keyboard character entry to select this menu entry, overloaded:
-    // We set bit 0x20 to 0 for normal message, to 1 for a PROGMEM message
-    const char key;
-
-  public:
-    // Constructor: init the array of menu entries
-    LCDMenuEntry(char * const  m, bool isprogMem, char k, void (*c)()) :
-      message(m),
-      //#if SerialMenu_DISABLE_PROGMEM_SUPPORT != true
-      key(((isprogMem) ? (k|0x20) : (k&(~0x20)))),
-      //#else
-      //  key(k),
-      //#endif
-      actionCallback(c)
-    {}
-
-    // Get the menu message to display
-    inline const char * getMenu() const
-    {
-      return message;
-    }
-
-    inline char* setMenu(char* menuEntry)
-    {
-      message=menuEntry;
-    }
-
-    inline bool isProgMem() const
-    {
-      return key & 0x20;
-    }
-
-    // Check if the user input k matches this menu entry
-    // Characters are converted to lowercase ASCII.
-    // @note this impacts also symbols, not numbers, so test before using those
-    inline bool isChosen(const char k) const
-    {
-      return (k|0x20) == (key|0x20);
-    }
+struct LCDMenuEntry
+{
+  char * message;
+  void (*actionCallback)();
 };
-
-
-//A GETNUMBER MENU
-extern char getNumberMenuIntro[];
-extern char getNumberMenuValue[];
-extern LCDMenuEntry getNumberMenu[];
-extern uint8_t numberMenuSize;
 
 ///////////////////////////////////////////////////////////////////////////////
 // The menu is a singleton class in which you load an array of menu entries.
@@ -114,32 +64,29 @@ class LCDMenu
 {
   private:
 
-    // If PROGMEM is used, copy using this SRAM buffer size.
-    static constexpr uint8_t PROGMEM_BUF_SIZE = 8;
-
     // This class implements a singleton design pattern with one static instance
     static LCDMenu * singleton;
 
     // Points to the array of menu entries for the current menu
-    static LCDMenuEntry * menu;
+    LCDMenuEntry * menu;
 
     // number of entries in the current menu
-    static uint8_t size;
+    uint8_t size;
 
     LCDMenuEntry * formerMenu;
     uint8_t formerMenuSize;
 
-    static char getNumberMenuIntro[];
-    static char getNumberMenuValue[];
-    LCDMenuEntry * getNumberMenu;
+    char *getNumberMenuLabel;
     uint8_t numberMenuSize;
-    static boolean inNumberMenu;
+    boolean inNumberMenu;
+    void (*callbackAux)(int);
+
 
     LCD_I2C lcd;
-    static int8_t cursor;
+    int8_t cursor;
     int8_t oldCursor;
-    static uint8_t windowMin;
-    static uint8_t windowMax;
+    uint8_t windowMin;
+    uint8_t windowMax;
 
     //Constructor: init with an empty menu, prepares LCD screen
     LCDMenu();
@@ -150,8 +97,8 @@ class LCDMenu
 
     static uint8_t portStatus;
 
-    //getNumber value
-    static uint16_t number;
+    //getNumberMenu attributes
+    uint16_t number;
 
     // Get a pointer to the one singleton instance of this class
     static LCDMenu& get();
@@ -169,20 +116,15 @@ class LCDMenu
       cursor=0;
       oldCursor=0;
 
-      windowMin=0;
-      windowMax=LCD_MAX_ROWS-1;
-
       menu = array;
       size = arraySize;
       Serial.print("LoadingMenu ");
-      Serial.println(menu[0].getMenu());
+      Serial.println(menu[0].message);
     //  lcd.backlight();
     }
 
     // Display the current menu on the Serial console
     void show();
-
-    void reckonNumberMenu();
 
     // Uses I2C_LC2 print, so there is no need of instanciating
     // a new object if we just want to show a result on screen, for instance.
@@ -198,51 +140,23 @@ class LCDMenu
     // return a number input read form the LCD "console".
     // Note: this routine is showing a special menu
     // for a number to be typed through buttons use
-    template <typename T>
-    T getNumber(const char* message, const T startingValue){
+    void getNumber(const char* message, const uint16_t startingValue, void (*callback)(int)){
 
       formerMenu=menu;
       formerMenuSize=size;
 
-      LCDMenuEntry getNumberMenu[] = {
-        {getNumberMenuIntro, false, '1', [](){} },
-        {getNumberMenuValue, false, '2', [](){
-          //DEBUGGING PURPOSES
-          Serial.println("Lambda world");
-          singleton->inNumberMenu = !singleton->inNumberMenu;
-        }}
-      };
-
-      uint8_t numberMenuSize = GET_MENU_SIZE(getNumberMenu);
-
       number=startingValue;
-      //Serial.println(number);
+      Serial.println(number);
 
-      sprintf(getNumberMenuIntro, "%s", message);
-      reckonNumberMenu();
-      sprintf(getNumberMenuValue, "%d", startingValue);
-
+      getNumberMenuLabel = message;
+      callbackAux = callback;
       inNumberMenu=true;
 
-      load(getNumberMenu,numberMenuSize);
-
       show();
-
-      while (inNumberMenu)
-      {
-        run(500);
-      }
-
-      //Display former menu
-      load(singleton->formerMenu, singleton->formerMenuSize);
-      show();
-      Serial.print("--->");
-      Serial.println((T)number);
-      return (T)number;
     }
 ///////////////////////////////////////////////////////////////////////////////
     // Run the menu.
-    // SerialMenu::run modified so Menu can be navigated by typing
+    // LCDMenu::run modified so Menu can be navigated by typing
     //W (up) and S (down)
     bool run(const uint16_t loopDelayMs);
 

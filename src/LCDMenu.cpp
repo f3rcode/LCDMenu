@@ -5,24 +5,18 @@
 #include <LCDMenu.hpp>
 
 LCDMenu* LCDMenu::singleton = nullptr;
-LCDMenuEntry* LCDMenu::menu = nullptr;
-uint8_t LCDMenu::size = uint8_t(0);
-int8_t LCDMenu::cursor = int8_t(0);
-uint8_t LCDMenu::windowMin = uint8_t(0);
-uint8_t LCDMenu::windowMax = LCD_MAX_ROWS-1;
 uint8_t LCDMenu::portStatus =  uint8_t(0);
-uint16_t LCDMenu::number;
-boolean LCDMenu::inNumberMenu=false;
-
-char LCDMenu::getNumberMenuIntro[15];
-char LCDMenu::getNumberMenuValue[15];
-
-
 
 
 LCDMenu::LCDMenu() :
     lcd(0x27),
-    oldCursor(0)
+    oldCursor(0),
+    cursor(0),
+    windowMin(0),
+    windowMax(LCD_MAX_ROWS-1),
+    size(0),
+    number(0),
+    inNumberMenu(false)
     {
 
     Serial.begin(9600);
@@ -78,28 +72,25 @@ void LCDMenu::show()
       for (uint8_t i = windowMin; i <= windowMax; i++)
       {
          lcd.setCursor(0, i-windowMin);
-         Serial.println(menu[i].getMenu());
+         Serial.println(menu[i].message);
          if (i==cursor) lcd.print(">");
          else lcd.print(" ");
-         lcd.print(menu[i].getMenu());
+         lcd.print(menu[i].message);
       }
     }
     else
     {
       //void print (const char* text1, const char* text2)
       lcd.setCursor(0, 0);
-      Serial.println(menu[0].getMenu());
-      lcd.print(menu[0].getMenu());
+      Serial.println(getNumberMenuLabel);
+      lcd.print(getNumberMenuLabel);
       lcd.setCursor(0, 1);
-      reckonNumberMenu();
-      lcd.print(menu[1].getMenu());
+      lcd.print(number-1);
+      lcd.print("   [");
+      lcd.print(number);
+      lcd.print("]   ");
+      lcd.print(number+1);
     }
-
-}
-
-void LCDMenu::reckonNumberMenu()
-{
-  sprintf(getNumberMenuValue,"%d   [%d]   %d",number-1,number,number+1);
 }
 
 void LCDMenu::print(const char* text, const uint8_t delayMs)
@@ -178,26 +169,6 @@ void LCDMenu::print (float number1,float number2,float number3,const char* text)
   lcd.print(number3);
 }
 
-////GET RID OF MAGIC NUMBERS IN DEFAULT ARGS!!!
-/*
-template <class T>
-T LCDMenu::getNumber(const char* message, const T startingValue){
-
-  T number=(T)0;
-
-  this->load(getNumberMenu,numberMenuSize);
-  this->show();
-
-  return number;
-  //
-  //while()
-  //  run(loopDelayMs);
-
-}
-*/
-/*
-* SerialMenu::run function mod
-*/
 bool LCDMenu::run(const uint16_t loopDelayMs)
 {
   if (!inNumberMenu)
@@ -210,7 +181,6 @@ bool LCDMenu::run(const uint16_t loopDelayMs)
     }
 
     delay(loopDelayMs);
-
     return false;
  }
  else
@@ -241,16 +211,20 @@ void LCDMenu::enterSelected()
 
   digitalWrite(5,LOW);//DEBUG
 
-  if (!inNumberMenu)
+  if (!singleton->inNumberMenu)
   {
-    menu[LCDMenu::cursor].actionCallback();
+    singleton->menu[singleton->cursor].actionCallback();
   }
   else
   {
-    menu[1].actionCallback();
+    singleton->inNumberMenu = !singleton->inNumberMenu;
+    singleton->cursor = 0;
+    singleton->oldCursor = 0;
+    singleton->windowMin = 0;
+    singleton->windowMax = LCD_MAX_ROWS-1;
+    delay(400);
+    singleton->callbackAux(singleton->number);
   }
-
-  return;
  }
 
 //static
@@ -259,31 +233,22 @@ void LCDMenu::upSelected()
 
    digitalWrite(5,HIGH);//DEBUG
 
-   if (!inNumberMenu)
+   if (!singleton->inNumberMenu)
    {
-     if (cursor == windowMax)
+     if (singleton->cursor == singleton->windowMax)
      {
-       if (windowMax == size-1)
+       if (singleton->windowMax == singleton->size-1)
        {
          return;
        }
        else
        {
-         cursor = windowMax;
-         windowMax++;
-         windowMin++;
+         singleton->windowMax++;
+         singleton->windowMin++;
        }
      }
-     else
-     {
-       cursor++;
-     }
   }
-  else
-  {
-    cursor++;
-  }
-  return;
+  singleton->cursor++;
 }
 
  //static
@@ -292,31 +257,22 @@ void LCDMenu::upSelected()
 
  digitalWrite(5,HIGH);//DEBUG
 
- if (!inNumberMenu)
+ if (!singleton->inNumberMenu)
  {
-   if (cursor == windowMin)
+   if (singleton->cursor == singleton->windowMin)
    {
-     if (!windowMin) //(=0)
+     if (!singleton->windowMin) //(=0)
      {
        return;
      }
      else
      {
-       cursor = windowMin;
-       windowMin--;
-       windowMax--;
+       singleton->windowMin--;
+       singleton->windowMax--;
      }
    }
-   else
-   {
-     cursor--;
-   }
  }
- else
- {
-   cursor--;
- }
- return;
+ singleton->cursor--;
 }
 //ISR_NOBLOCK insert a SEI() instruction right at the beginning
 // in order to not defer any other interrupt more than absolutely needed.

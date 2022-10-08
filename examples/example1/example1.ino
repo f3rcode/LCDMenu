@@ -14,7 +14,7 @@ char mainMenuNumber[]  = "4 - Number Menu";
 
 // Define the main menu
 LCDMenuEntry mainMenu[] = {
-  {mainMenuTempeh, false, '1', [](){//prints on lcd and Serial
+  {mainMenuTempeh, [](){//prints on lcd and Serial
                                     //and shows menu on lcd again after
                                     //UNTIL PRESSING A BUTTON WHICH
                                     //CHANGES INTERNAL CURSOR VALUE
@@ -22,19 +22,22 @@ LCDMenuEntry mainMenu[] = {
                                     menu.print("Option2");
                                     foo(0);
                                   } },
-  {mainMenuNatto, false, '2', [](){//prints on lcd and serial
+  {mainMenuNatto, [](){//prints on lcd and serial
                                   //and get the message on lcd screen for n msec.
                                   Serial.println("Option2");
                                   menu.print("Option2",(uint8_t) 500);
                                   foo(1);
                                   } },
-  {mainMenuKoji, false, '3', [](){Serial.println("Still not available.");
+  {mainMenuKoji, [](){Serial.println("Still not available.");
                                   menu.print("Still not available.");
                                   } },
-  {mainMenuNumber, false, '3', [](){//menu.print("Starring NumberMenu", (uint8_t) 1000);
-                                    foo((uint8_t)menu.getNumber<uint8_t>("something", (uint8_t) 5));
-
-                                  } },
+  {mainMenuNumber, [](){//menu.print("Starring NumberMenu", (uint8_t) 1000);
+                                     menu.getNumber("something", (uint8_t) 8,
+                                     [](int v){
+                                        Serial.println("Inside getNumber callback");
+                                        menu.print("setting number",(uint8_t) 500);
+                                        menu.print(v,(uint8_t) 500);});
+                                  }},
 };
 constexpr uint8_t mainMenuSize = GET_MENU_SIZE(mainMenu);
 
