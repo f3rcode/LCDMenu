@@ -73,11 +73,7 @@ class LCDMenu
     // number of entries in the current menu
     uint8_t size;
 
-    LCDMenuEntry * formerMenu;
-    uint8_t formerMenuSize;
-
     char *getNumberMenuLabel;
-    uint8_t numberMenuSize;
     boolean inNumberMenu;
     void (*callbackAux)(int);
 
@@ -141,10 +137,6 @@ class LCDMenu
     // Note: this routine is showing a special menu
     // for a number to be typed through buttons use
     void getNumber(const char* message, const uint16_t startingValue, void (*callback)(int)){
-
-      formerMenu=menu;
-      formerMenuSize=size;
-
       number=startingValue;
       Serial.println(number);
 
