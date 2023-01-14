@@ -53,7 +53,7 @@
 
 struct LCDMenuEntry
 {
-  char * message;
+  const char * message;
   void (*actionCallback)();
 };
 
@@ -68,7 +68,7 @@ class LCDMenu
     static LCDMenu * singleton;
 
     // Points to the array of menu entries for the current menu
-    LCDMenuEntry * menu;
+    const LCDMenuEntry * menu;
 
     // number of entries in the current menu
     uint8_t size;
@@ -85,9 +85,10 @@ class LCDMenu
     uint8_t windowMax;
 
     //Constructor: init with an empty menu, prepares LCD screen
-    LCDMenu();
+    LCDMenu(LCD_I2C& lcd);
 
     void pcIntInit();
+    void pcIntDestroy();
 
   public:
 
@@ -97,11 +98,14 @@ class LCDMenu
     uint16_t number;
 
     // Get a pointer to the one singleton instance of this class
-    static LCDMenu& get();
+    static LCDMenu& get(LCD_I2C& lcd);
+
+    // Destroy the one singleton instance of this class
+    ~LCDMenu();
 
     // Get a pointer to the one singleton instance of this class and point it
     // to the current menu
-    static const LCDMenu& get(LCDMenuEntry* array, uint8_t arraySize);
+    //static const LCDMenu& get(LCDMenuEntry* array, uint8_t arraySize);
 
     void lcdBegin();
 
@@ -124,19 +128,22 @@ class LCDMenu
 
     // Uses I2C_LC2 print, so there is no need of instanciating
     // a new object if we just want to show a result on screen, for instance.
-    void print(const char* text, const uint8_t delayMs = 0); // prints text and shows menu after delayMs if set
+    /*void print(const char* text, const uint8_t delayMs = 0); // prints text and shows menu after delayMs if set
     void print (const char* text1, const char* text2);
     void print(int integer, const uint8_t delayMs = 0);  // prints text and shows menu after delayMs if set
     void print (float number);
     void print (float number1,float number2);
     void print (float number1,float number2,float number3);
-    void print (float number1,float number2,float number3, const char* text);
+    void print (float number1,float number2,float number3, const char* text);*/
 
 
     // return a number input read form the LCD "console".
     // Note: this routine is showing a special menu
     // for a number to be typed through buttons use
-    void getNumber(const char* message, const uint16_t startingValue, void (*callback)(int)){
+    void getNumber(const char* message, const uint16_t startingValue, void (*callback)(int));
+
+    void toNumberMenu(const char* message, const uint16_t startingValue, void (*callback)(int))
+    {
       number=startingValue;
       Serial.println(number);
 

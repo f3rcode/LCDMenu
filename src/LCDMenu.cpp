@@ -8,8 +8,8 @@ LCDMenu* LCDMenu::singleton = nullptr;
 uint8_t LCDMenu::portStatus =  uint8_t(0);
 
 
-LCDMenu::LCDMenu() :
-    lcd(0x27),
+LCDMenu::LCDMenu(LCD_I2C& lcd) :
+    lcd(lcd),
     oldCursor(0),
     cursor(0),
     windowMin(0),
@@ -19,8 +19,8 @@ LCDMenu::LCDMenu() :
     inNumberMenu(false)
     {
 
-    Serial.begin(9600);
-    while (!Serial);
+    //Serial.begin(9600);
+    //while (!Serial);
 
     pcIntInit();
     pinMode(ENTER_BUTTON, INPUT);
@@ -31,30 +31,42 @@ LCDMenu::LCDMenu() :
     digitalWrite(DOWN_BUTTON, HIGH); //PULLUP
 }
 
+LCDMenu::~LCDMenu()
+{
+  pcIntDestroy();
+}
+
 void LCDMenu::pcIntInit()
-   {
-   PCMSK0 |= (1 << PCINTx(0))|(1 << PCINTx(1))|(1 << PCINTx(2));  //enables pin <--PREFERIBLY NOT HARDCODED
-   PCIFR |= (1 << PCIF0); //clear any oustanding interrupt
-   PCICR |= (1 << PCIE0); //enables interrupt for the group PCINT0..7 corresponding to portB (D8 to D13)
-   }
+{
+  PCMSK0 |= (1 << PCINTx(0))|(1 << PCINTx(1))|(1 << PCINTx(2));  //enables pin <--PREFERIBLY NOT HARDCODED
+  PCIFR |= (1 << PCIF0); //clear any oustanding interrupt
+  PCICR |= (1 << PCIE0); //enables interrupt for the group PCINT0..7 corresponding to portB (D8 to D13)
+}
+
+void LCDMenu::pcIntDestroy()
+{
+  PCMSK0 &= (0 << PCINTx(0))&(0 << PCINTx(1))&(0 << PCINTx(2));  //enables pin <--PREFERIBLY NOT HARDCODED
+  //PCIFR &= (0 << PCIF0); //clear any oustanding interrupt
+  PCICR &= (0 << PCIE0); //disables interrupt for the group PCINT0..7 corresponding to portB (D8 to D13)
+}
 
 //static
-LCDMenu &LCDMenu::get()
+LCDMenu& LCDMenu::get(LCD_I2C& lcd)
   {
       if (!singleton)
-        singleton = new LCDMenu;
+        singleton = new LCDMenu(lcd);
 
       return *singleton;
     }
 
 //static
-const LCDMenu& LCDMenu::get(LCDMenuEntry* array, uint8_t arraySize)
+/*const LCDMenu& LCDMenu::get(LCDMenuEntry* array, uint8_t arraySize)
   {
       (void) LCDMenu::get();
       singleton->load(array, arraySize);
       return *singleton;
   }
-
+*/
 //method to init lcd
 //Wire::begin() hangs when LCD_I2C::begin() called from LCDMenu constructor
 void LCDMenu::lcdBegin()
@@ -67,22 +79,22 @@ void LCDMenu::show()
 {
     //by now, just printing data from SRAM
     lcd.clear();
-    if (!inNumberMenu)
-    {
+    /*if (!inNumberMenu)
+    {//Legacy
       for (uint8_t i = windowMin; i <= windowMax; i++)
       {
          lcd.setCursor(0, i-windowMin);
-         Serial.println(menu[i].message);
+         //Serial.println(menu[i].message);
          if (i==cursor) lcd.print(">");
          else lcd.print(" ");
          lcd.print(menu[i].message);
       }
     }
-    else
+    else*/
     {
       //void print (const char* text1, const char* text2)
       lcd.setCursor(0, 0);
-      Serial.println(getNumberMenuLabel);
+      //Serial.println(getNumberMenuLabel);
       lcd.print(getNumberMenuLabel);
       lcd.setCursor(0, 1);
       lcd.print(number-1);
@@ -93,86 +105,21 @@ void LCDMenu::show()
     }
 }
 
-void LCDMenu::print(const char* text, const uint8_t delayMs)
+void LCDMenu::getNumber(const char* message, const uint16_t startingValue, void (*callback)(int))
 {
-  lcd.clear();
-  lcd.setCursor(0, 0);
-  lcd.print(text);
-  if (delayMs != 0 )
+  toNumberMenu(message, startingValue, callback);
+
+  while(singleton->inNumberMenu)
   {
-    delay(delayMs);
-    show();
+    run(700);
   }
 }
 
-void LCDMenu::print (const char* text1, const char* text2)
-{
-  lcd.clear();
-  lcd.setCursor(0, 0);
-  Serial.print(text1);
-  Serial.print(":");
-  Serial.println(text2);
-  lcd.print(text1);
-  lcd.setCursor(0, 1);
-  lcd.print(text2);
-}
-
-void LCDMenu::print(int integer, const uint8_t delayMs)
-{
-  lcd.clear();
-  lcd.setCursor(0, 0);
-  lcd.print(integer);
-  if (delayMs != 0 )
-  {
-    delay(delayMs);
-    show();
-  }
-}
-
-void LCDMenu::print (float number)
-{
-  lcd.clear();
-  lcd.setCursor(0, 0);
-  lcd.print(number);
-}
-
-void LCDMenu::print (float number1,float number2)
-{
-  lcd.clear();
-  lcd.setCursor(0, 0);
-  lcd.print(number1);
-  lcd.setCursor(0, 1);
-  lcd.print(number2);
-}
-
-void LCDMenu::print (float number1,float number2,float number3)
-{
-  lcd.clear();
-  lcd.setCursor(0, 0);
-  lcd.print(number1);
-  lcd.setCursor(0, 1);
-  lcd.print(number2);
-  lcd.setCursor(12, 1);
-  lcd.print(number3);
-}
-
-void LCDMenu::print (float number1,float number2,float number3,const char* text)
-{
-  lcd.clear();
-  lcd.setCursor(0, 0);
-  lcd.print(number1);
-  lcd.setCursor(11, 0);
-  lcd.print(text);
-  lcd.setCursor(0, 1);
-  lcd.print(number2);
-  lcd.setCursor(12, 1);
-  lcd.print(number3);
-}
 
 bool LCDMenu::run(const uint16_t loopDelayMs)
 {
-  if (!inNumberMenu)
-  {
+  /*if (!inNumberMenu)
+  {//Legacy
     if (oldCursor!=cursor)
     {
       oldCursor=cursor;
@@ -183,7 +130,7 @@ bool LCDMenu::run(const uint16_t loopDelayMs)
     delay(loopDelayMs);
     return false;
  }
- else
+ else*/
  {
    if (cursor<oldCursor)
    {
@@ -211,19 +158,19 @@ void LCDMenu::enterSelected()
 
   digitalWrite(5,LOW);//DEBUG
 
-  if (!singleton->inNumberMenu)
-  {
+  /*if (!singleton->inNumberMenu)
+  {//Legacy
     singleton->menu[singleton->cursor].actionCallback();
   }
-  else
+  else*/
   {
-    singleton->inNumberMenu = !singleton->inNumberMenu;
     singleton->cursor = 0;
     singleton->oldCursor = 0;
     singleton->windowMin = 0;
     singleton->windowMax = LCD_MAX_ROWS-1;
     delay(400);
     singleton->callbackAux(singleton->number);
+    singleton->inNumberMenu = !singleton->inNumberMenu;
   }
  }
 
@@ -233,8 +180,8 @@ void LCDMenu::upSelected()
 
    digitalWrite(5,HIGH);//DEBUG
 
-   if (!singleton->inNumberMenu)
-   {
+   /*if (!singleton->inNumberMenu)
+   {//Legacy
      if (singleton->cursor == singleton->windowMax)
      {
        if (singleton->windowMax == singleton->size-1)
@@ -247,7 +194,7 @@ void LCDMenu::upSelected()
          singleton->windowMin++;
        }
      }
-  }
+  }*/
   singleton->cursor++;
 }
 
@@ -257,8 +204,8 @@ void LCDMenu::upSelected()
 
  digitalWrite(5,HIGH);//DEBUG
 
- if (!singleton->inNumberMenu)
- {
+ /*if (!singleton->inNumberMenu)
+ {//Legacy
    if (singleton->cursor == singleton->windowMin)
    {
      if (!singleton->windowMin) //(=0)
@@ -271,7 +218,7 @@ void LCDMenu::upSelected()
        singleton->windowMax--;
      }
    }
- }
+ }*/
  singleton->cursor--;
 }
 //ISR_NOBLOCK insert a SEI() instruction right at the beginning
